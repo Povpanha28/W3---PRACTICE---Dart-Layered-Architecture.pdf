@@ -3,6 +3,7 @@ import '../domain/quiz.dart';
 import 'package:uuid/uuid.dart';
 
 class QuizConsole {
+  var id = Uuid();
   Quiz quiz;
 
   QuizConsole({required this.quiz});
@@ -23,54 +24,61 @@ class QuizConsole {
 
       nameInput = nameInput.trim();
 
-      // Check if submission already exists
-      Submission? existingSubmission = quiz.submissions.firstWhere(
-        (s) => s.name.toLowerCase() == nameInput!.toLowerCase(),
-        orElse: () =>
-            Submission(id: quiz.id, name: '', quiz: Quiz(questions: [])),
-      );
+      Player player = Player(name: nameInput, id: id.v4());
+      quiz.addPlayer(player);
 
-      Submission submission;
-      if (existingSubmission.name.isNotEmpty) {
-        submission = existingSubmission;
-        submission.quiz = Quiz(id: Uuid().v4(), questions: quiz.questions);
-      } else {
-        submission = Submission(
-            id: quiz.id,
-            name: nameInput,
-            quiz: Quiz(id: Uuid().v4(), questions: quiz.questions));
-        quiz.addSubmission(submission);
+      for (var p in quiz.players) {
+        print(p.name);
       }
 
+      // clear the previous answers :
+
+      quiz.answers.clear();
+
       // Ask questions
+
       for (var question in quiz.questions) {
         print('\nQuestion: ${question.title} - (${question.score} points)');
         print('Choices: ${question.choices}');
         stdout.write('Your answer: ');
 
         String? userInput = stdin.readLineSync();
+
         if (userInput != null && userInput.isNotEmpty) {
+          // create and store answer
           Answer answer = Answer(question: question, answerChoice: userInput);
-          submission.quiz.addAnswer(answer);
+          quiz.addAnswer(answer);
         } else {
           print('No answer entered. Skipping question.');
         }
       }
 
+// after collecting all answers:
+      for (var a in quiz.answers) {
+        print('Answer recorded: ${a.answerChoice}');
+      }
+
+      // one submission per player
+      // IMPORTANT: pass a copy of quiz.answers so future clears/edits
+      // don't mutate answers kept inside previous submissions.
+      Submission submission =
+          Submission(player: player, answers: List.from(quiz.answers));
+
+      quiz.submitAnswer(submission);
+      print('\nSubmission complete for ${player.name} ');
+
+      print(quiz.submissions.length);
+
       // Calculate score
-      int percentage = submission.quiz.getScoreInPercentage();
-      int score = submission.quiz.getScore();
-      submission.score = score; // overwrite old score
+      int percentage = submission.calculatePercentage();
+      // int score = quiz.getScore();
 
-      print('\n--- Quiz Finished for ${submission.name} ---');
-      print('Score: $score pts (${percentage}%)\n');
-
+      // print('\n--- Quiz Finished for ${name} ---');
+      print('Score: (${percentage}%)\n');
       // Show all players and scores
       print('--- Submission History ---');
       for (var s in quiz.submissions) {
-        print('Player: ${s.name} : ${s.score}');
-        print('Quiz id : ${quiz.id}');
-        print('Submission id : ${s.id}');
+        print('Player: ${s.player.name} : ${s.getScoreByPlayer(s.player)}');
       }
     }
   }

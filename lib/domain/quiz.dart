@@ -27,19 +27,44 @@ class Answer {
 class Player {
   String? id;
   final String name;
-  int score;
-  Quiz quiz;
+  // List<Answer> playerAnswers = [];
 
-  Player({required this.name, required this.quiz, this.score = 0, this.id});
+  Player({required this.name, this.id});
+
+  // void addPlayerAnswer(Answer answer) {
+  //   playerAnswers.add(answer);
+  // }
 }
 
 class Submission {
-  String? id;
-  final String name;
-  int score;
-  Quiz quiz;
+  final Player player;
+  final List<Answer> answers;
 
-  Submission({required this.name, required this.quiz, this.score = 0, this.id});
+  Submission({required this.player, required this.answers});
+
+  int calculateScore() {
+    int total = 0;
+    for (var a in answers) {
+      if (a.isGood()) total += a.question.score;
+    }
+    return total;
+  }
+
+  int calculatePercentage() {
+    if (answers.isEmpty) return 0;
+    int correct = answers.where((a) => a.isGood()).length;
+    return ((correct / answers.length) * 100).toInt();
+  }
+
+  Map<String, int> getScoreByPlayer(Player player) {
+    if (player.id == this.player.id) {
+      return {
+        'score': calculateScore(),
+        'percentage': calculatePercentage(),
+      };
+    }
+    return {};
+  }
 }
 
 class Quiz {
@@ -56,30 +81,15 @@ class Quiz {
   }
 
   void addPlayer(Player player) {
-    this.players.add(player);
-  }
-
-  void addSubmission(Submission submission) {
-    this.submissions.add(submission);
-  }
-
-  int getScoreInPercentage() {
-    int correctCount = 0;
-    for (Answer answer in answers) {
-      if (answer.isGood()) {
-        correctCount++;
-      }
+    final index = players.indexWhere((p) => p.name == player.name);
+    if (index == -1) {
+      players.add(player);
+    } else {
+      players[index] = player; // Overwrite existing player's data
     }
-    return ((correctCount / questions.length) * 100).toInt();
   }
 
-  int getScore() {
-    int totalScore = 0;
-    for (Answer answer in answers) {
-      if (answer.isGood()) {
-        totalScore++;
-      }
-    }
-    return totalScore;
+  void submitAnswer(Submission submission) {
+    submissions.add(submission);
   }
 }
